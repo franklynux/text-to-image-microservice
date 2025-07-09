@@ -24,7 +24,9 @@ jobs:
         pip install pytest
         
     - name: Run tests
-      run: pytest tests/
+      run: |
+        export PYTHONPATH=.
+        pytest tests/
       
   build:
     runs-on: ubuntu-latest

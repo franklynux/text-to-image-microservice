@@ -5,3 +5,5 @@ venv/
 terraform.tfstate*
 .terraform/
 text_to_image_service.code-workspace
+.pytest_cache/
+__pycache__/
