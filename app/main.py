@@ -50,8 +50,8 @@ def generate_image(request: GenerateImageRequest):
             "text_prompts": [{"text": prompt}],
             "cfg_scale": 7,
             "steps": 30,
-            "width": 512,
-            "height": 512
+            "width": 1024,
+            "height": 1024
         })
         
         response = bedrock.invoke_model(
