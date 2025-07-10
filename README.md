@@ -4,12 +4,14 @@ A production-ready FastAPI microservice that generates high-quality images from 
 
 ## 🚀 Features
 
-- **AI-Powered Image Generation**: Uses Amazon Bedrock's Stable Diffusion XL for high-quality images
+- **AI-Powered Image Generation**: Uses Amazon Bedrock's Stable Diffusion XL for high-quality 1024x1024 images
 - **RESTful API**: Clean, documented endpoints with automatic OpenAPI/Swagger docs
 - **File Management**: Automatic image storage and serving with unique filenames
 - **Health Monitoring**: Built-in health check endpoint for monitoring
-- **Docker Ready**: Containerized for easy deployment and scaling
-- **Cloud Native**: Optimized for AWS App Runner, ECS, and other cloud platforms
+- **CI/CD Pipeline**: Automated testing, building, and deployment via GitHub Actions
+- **Infrastructure as Code**: Terraform templates for AWS App Runner deployment
+- **Docker Ready**: Containerized with layer caching for fast builds
+- **Cloud Native**: Optimized for AWS App Runner with auto-scaling
 
 ## 📋 Prerequisites
 
@@ -32,6 +34,8 @@ A production-ready FastAPI microservice that generates high-quality images from 
   ```
 - **Model Access**: Request access to Stability AI SDXL in AWS Bedrock console
 
+![AWS Bedrock Model Access](screenshots/bedrock-model-access.png)
+
 ### System Requirements
 - **Python 3.11+**
 - **Docker** (for containerized deployment)
@@ -43,8 +47,8 @@ A production-ready FastAPI microservice that generates high-quality images from 
 
 1. **Clone the repository**
    ```bash
-   git clone <your-repo-url>
-   cd text_to_image_service
+   git clone https://github.com/franklynux/text-to-image-microservice.git
+   cd text-to-image-microservice
    ```
 
 2. **Create virtual environment**
@@ -63,16 +67,7 @@ A production-ready FastAPI microservice that generates high-quality images from 
    pip install -r requirements.txt
    ```
 
-4. **Configure environment variables**
-   
-   Create `.env` file:
-   ```env
-   AWS_ACCESS_KEY_ID=your_access_key_here
-   AWS_SECRET_ACCESS_KEY=your_secret_key_here
-   AWS_DEFAULT_REGION=us-east-1
-   ```
-
-5. **Start the service**
+4. **Start the service**
    ```bash
    uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
    ```
@@ -80,6 +75,8 @@ A production-ready FastAPI microservice that generates high-quality images from 
 6. **Access the API**
    - **API Documentation**: http://localhost:8000/docs
    - **Health Check**: http://localhost:8000/health
+
+![FastAPI Swagger Documentation](screenshots/fastapi-swagger-docs.png)
 
 ### Docker Deployment
 
@@ -93,18 +90,33 @@ A production-ready FastAPI microservice that generates high-quality images from 
    docker run -d \
      --name text-to-image \
      -p 8000:8000 \
-     --env-file .env \
      -v $(pwd)/generated_images:/app/generated_images \
      text-to-image-service
    ```
 
 ### AWS App Runner Deployment
 
-1. **Push to container registry** (ECR, Docker Hub, etc.)
+#### Using Terraform (Recommended)
+1. **Navigate to terraform directory**
+   ```bash
+   cd terraform_app_runner
+   ```
+
+2. **Initialize and apply**
+   ```bash
+   terraform init
+   terraform plan
+   terraform apply
+   ```
+
+#### Manual Setup
+1. **Push to ECR** (automated via GitHub Actions)
 2. **Create App Runner service** with:
    - **Port**: 8000
    - **Health check path**: `/health`
-   - **Environment variables**: AWS credentials
+   - **ECR Image**: `536697239284.dkr.ecr.us-east-1.amazonaws.com/text_to_image_service:latest`
+
+![AWS App Runner Configuration](screenshots/apprunner-configuration.png)
 
 ## 📚 API Documentation
 
@@ -144,7 +156,7 @@ Content-Type: application/json
 ```
 
 **Image Generation Parameters:**
-- **Resolution**: 512x512 pixels
+- **Resolution**: 1024x1024 pixels
 - **Steps**: 30 (quality vs speed balance)
 - **CFG Scale**: 7 (prompt adherence)
 - **Format**: PNG
@@ -160,6 +172,10 @@ GET /download/a1b2c3d4.png
 ```
 
 **Response:** Binary image file (PNG format)
+
+### API Testing Example
+
+![API Testing with Generated Image](screenshots/api-testing-example.png)
 
 ### Example Usage
 
@@ -223,11 +239,11 @@ curl -X POST http://localhost:8000/generate-image \
 ## 💰 Cost Considerations
 
 ### Amazon Bedrock Pricing (Stability AI SDXL)
-- **Cost per image**: ~$0.018 (512x512)
+- **Cost per image**: ~$0.072 (1024x1024)
 - **Monthly estimates**:
-  - 100 images: ~$1.80
-  - 1,000 images: ~$18.00
-  - 10,000 images: ~$180.00
+  - 100 images: ~$7.20
+  - 1,000 images: ~$72.00
+  - 10,000 images: ~$720.00
 
 ### Cost Optimization Tips
 - Use smaller image sizes when possible
@@ -237,13 +253,6 @@ curl -X POST http://localhost:8000/generate-image \
 
 ## 🔧 Configuration
 
-### Environment Variables
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `AWS_ACCESS_KEY_ID` | Yes | - | AWS access key |
-| `AWS_SECRET_ACCESS_KEY` | Yes | - | AWS secret key |
-| `AWS_DEFAULT_REGION` | No | `us-east-1` | AWS region |
-
 ### Model Configuration
 The service uses these Bedrock parameters:
 ```json
@@ -251,23 +260,14 @@ The service uses these Bedrock parameters:
   "text_prompts": [{"text": "your_prompt"}],
   "cfg_scale": 7,
   "steps": 30,
-  "width": 512,
-  "height": 512
+  "width": 1024,
+  "height": 1024
 }
 ```
 
 ## 🚨 Troubleshooting
 
 ### Common Issues
-
-#### "SignatureDoesNotMatch" Error
-```bash
-# Sync system time (Windows)
-w32tm /resync
-
-# Check AWS credentials
-aws sts get-caller-identity
-```
 
 #### "Model access denied"
 1. Go to AWS Bedrock Console
@@ -277,7 +277,6 @@ aws sts get-caller-identity
 
 #### "Health check failed" (App Runner)
 - Ensure port 8000 is configured
-- Check environment variables are set
 - Verify `/health` endpoint responds
 
 #### "Image not found" (404)
@@ -292,19 +291,48 @@ export LOG_LEVEL=DEBUG
 uvicorn app.main:app --reload --log-level debug
 ```
 
+## 🔄 CI/CD Pipeline
+
+The project includes automated CI/CD using GitHub Actions:
+
+### Workflow Features
+- **Automated Testing**: Runs pytest on every push to main
+- **Docker Build**: Builds and pushes images to Amazon ECR
+- **Auto Deployment**: App Runner automatically deploys new ECR images
+- **Docker Layer Caching**: Speeds up builds using GitHub Actions cache
+
+### Setup GitHub Secrets
+Add these secrets in your GitHub repository settings:
+- `AWS_ACCESS_KEY_ID` - Your AWS access key
+- `AWS_SECRET_ACCESS_KEY` - Your AWS secret key
+
+### Workflow Triggers
+- Push to `main` branch triggers: Test → Build → Deploy
+- Failed tests prevent deployment
+
+![GitHub Actions Workflow](screenshots/github-actions-workflow.png)
+
 ## 📁 Project Structure
 ```
-text_to_image_service/
+text-to-image-microservice/
+├── .github/
+│   └── workflows/
+│       └── build-and-deploy.yaml  # CI/CD pipeline
 ├── app/
-│   └── main.py              # FastAPI application
-├── generated_images/        # Generated image storage
+│   ├── __init__.py
+│   └── main.py                    # FastAPI application
+├── generated_images/              # Generated image storage
+├── terraform_app_runner/          # Infrastructure as Code
+│   ├── main.tf                   # App Runner service
+│   ├── values.tf                 # Variables
+│   └── output.tf                 # Outputs
 ├── tests/
-│   └── test_main.py        # Test files
-├── .env.example            # Environment template
-├── .gitignore             # Git ignore rules
-├── Dockerfile             # Container configuration
-├── requirements.txt       # Python dependencies
-└── README.md             # This file
+│   └── test_main.py              # Unit tests
+├── .env.example                  # Environment template
+├── .gitignore                   # Git ignore rules
+├── dockerfile                   # Container configuration
+├── requirements.txt             # Python dependencies
+└── README.md                   # This file
 ```
 
 ## 🔒 Security Best Practices
@@ -321,8 +349,7 @@ text_to_image_service/
 ### AWS App Runner (Recommended)
 1. Build and push Docker image to ECR
 2. Create App Runner service
-3. Configure environment variables
-4. Set up custom domain (optional)
+3. Set up custom domain (optional)
 
 ### AWS ECS/Fargate
 1. Create ECS cluster
@@ -351,12 +378,6 @@ spec:
         image: your-registry/text-to-image-service:latest
         ports:
         - containerPort: 8000
-        env:
-        - name: AWS_ACCESS_KEY_ID
-          valueFrom:
-            secretKeyRef:
-              name: aws-credentials
-              key: access-key-id
 ```
 
 ## 📈 Monitoring & Observability
@@ -372,6 +393,8 @@ curl -f http://localhost:8000/health || exit 1
 - **Error rate**: Failed requests percentage
 - **Throughput**: Requests per minute
 - **AWS costs**: Bedrock usage costs
+
+![App Runner Monitoring Dashboard](screenshots/apprunner-monitoring.png)
 
 ## 🤝 Contributing
 
