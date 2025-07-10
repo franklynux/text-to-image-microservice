@@ -42,7 +42,7 @@ def test_generate_image_bedrock_success(tmp_path):
             with patch("builtins.open", create=True) as mock_open:
                 response = client.post("/generate-image", json={"prompt": "A test prompt"})
                 assert response.status_code == 200
-                assert response.json()["image_url"].startswith("/download/")
+                assert response.json()["image_url"].endswith(".png")
 
 # def test_generate_image_no_api_key(monkeypatch):
 #     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
